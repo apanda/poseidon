@@ -10,7 +10,8 @@
         }
     ],
     "dependencies": {
-        "uglify-js": "latest"
+        "uglify-js": "latest",
+        "traverse": "latest"
     }
 
 }
