@@ -1,0 +1,16 @@
+{
+    "name": "Poseidon",
+    "version": "0.0.1a",
+    "description": "Analysis tools for event oriented code",
+    "maintainers": [
+        {
+            "name" : "Aurojit Panda",
+            "email": "apanda@cs.berkeley.edu",
+            "web": "http://cs.berkeley.edu/~apanda"
+        }
+    ],
+    "dependencies": {
+        "uglify-js": "latest"
+    }
+
+}
