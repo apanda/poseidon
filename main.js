@@ -6,7 +6,14 @@ parser = uglify.parser;
 // Define us some constants since constants are good
 constants = {
     CALL_FUNCTION: 1,
-    CALL_ARGS: 2
+    CALL_ARGS: 2,
+    ASSIGN_TYPE: 1,
+    ASSIGN_LHS: 2,
+    ASSIGN_RHS: 3
+};
+
+var deparse = function (ast, b) {
+    return uglify.uglify.gen_code(ast, { beautify : b });
 };
 
 // the main function, will eventually reorganize this
@@ -29,7 +36,7 @@ function main(args) {
             data = data.replace(/^#![^\n]*/, '').trim();
         }
         // Run the tree through uglify-js
-        tree = null;
+        var tree = null;
         try {
             tree = parser.parse(data);
         }
@@ -37,9 +44,11 @@ function main(args) {
             console.log(e.message);
             throw e;
         }
+        var assignees = {}
         // Traverse the tree finding calls which involve anonymous functions as arguments
         traverse(tree).forEach(function (node) {
             if (node === 'call') {
+                console.log(this.parent.key);
                 var callbacks = 
                     traverse(this.parent.node).reduce(
                         function (acc, node) {
@@ -50,6 +59,25 @@ function main(args) {
                         }, []);
                 if (callbacks.length > 0) {
                     console.log("Function = ", this.parent.node[constants.CALL_FUNCTION]);
+                }
+                var add = [];
+                var args = this.parent.node[constants.CALL_ARGS];
+                for (var arg in args) {
+                    var newCode = "if (typeof(" + deparse(args[arg]) +") === \'function\') {console.log(\'Function=[" + this.parent.node[constants.CALL_FUNCTION] + "]\')}";
+                    try {
+                        parsed = parser.parse(newCode);
+                        parsed = parsed[1][0];
+                        add.push(parsed);
+                    }
+                    catch (e) {
+                        console.log("Error " + e.message);
+                        throw e;
+                    }
+                }
+                spliceArgs = [this.parent.key, add.length];
+                for (var elt in add) {
+                    console.log(add[elt]);
+                    spliceArgs.push(add[elt]);
                 }
             }
         });
