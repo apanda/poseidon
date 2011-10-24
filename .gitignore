@@ -6,6 +6,7 @@ public/css/admin/*.css
 /node_modules
 # Vim
 .*.sw[a-z]
+.swp
 *.un~i
 tags
 # OsX
