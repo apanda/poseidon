@@ -1,8 +1,9 @@
 #!/usr/bin/env node
-uglify = require('uglify-js'),
-fs = require('fs'),
-traverse = require('traverse'),
-parser = uglify.parser;
+var uglify = require('uglify-js');
+var fs = require('fs');
+var traverse = require('traverse');
+var assert = require('assert');
+var parser = uglify.parser;
 // Define us some constants since constants are good
 constants = {
     CALL_FUNCTION: 1,
@@ -47,40 +48,26 @@ function main(args) {
         var assignees = {}
         // Traverse the tree finding calls which involve anonymous functions as arguments
         traverse(tree).forEach(function (node) {
-            if (node === 'call') {
-                console.log(this.parent.key);
-                var callbacks = 
-                    traverse(this.parent.node).reduce(
-                        function (acc, node) {
-                            if (node === 'function') {
-                                acc.push(this.parent.node);
-                            }
-                            return acc;
-                        }, []);
-                if (callbacks.length > 0) {
-                    console.log("Function = ", this.parent.node[constants.CALL_FUNCTION]);
-                }
+            if ((node instanceof Array) && node[0] === 'call') {
                 var add = [];
-                var args = this.parent.node[constants.CALL_ARGS];
+                var args = this.node[constants.CALL_ARGS];
                 for (var arg in args) {
-                    var newCode = "if (typeof(" + deparse(args[arg]) +") === \'function\') {console.log(\'Function=[" + this.parent.node[constants.CALL_FUNCTION] + "]\')}";
-                    try {
-                        parsed = parser.parse(newCode);
-                        parsed = parsed[1][0];
-                        add.push(parsed);
-                    }
-                    catch (e) {
-                        console.log("Error " + e.message);
-                        throw e;
-                    }
+                    var newCode = "if (typeof(" + deparse(args[arg]) +") === \'function\') {console.log(\'Function=[" + this.node[constants.CALL_FUNCTION] + "]\')}";
+                    add.push(newCode);
                 }
-                spliceArgs = [this.parent.key, add.length];
-                for (var elt in add) {
-                    console.log(add[elt]);
-                    spliceArgs.push(add[elt]);
+                add.push("return " + deparse(this.node) +";");
+                var codeToAdd = "(function() {" + add.join(';') +"})()";
+                try {
+                    codeToAddTree = parser.parse(codeToAdd)[1][0][1];
+                    this.update(codeToAddTree, true);
+                }
+                catch (e) {
+                    console.log(e.message);
+                    throw e;
                 }
             }
         });
+        console.log(deparse(tree, true));
     };
     fs.readFile(args[2], 'utf-8',callback);
 }
