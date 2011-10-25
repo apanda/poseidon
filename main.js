@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-var uglify = require('uglify-js');
-var fs = require('fs');
-var traverse = require('traverse');
-var assert = require('assert');
-var parser = uglify.parser;
+var uglify = require('uglify-js'),
+    fs = require('fs'),
+    traverse = require('traverse'),
+    assert = require('assert'),
+    parser = uglify.parser;
 // Define us some constants since constants are good
 constants = {
     CALL_FUNCTION: 1,
