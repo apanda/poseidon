@@ -12,7 +12,8 @@
     "dependencies": {
         "uglify-js": "latest",
         "traverse": "latest",
-        "prototype": "latest"
+        "prototype": "latest",
+        "underscore": "latest"
     }
 
 }
