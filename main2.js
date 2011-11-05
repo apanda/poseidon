@@ -6,7 +6,7 @@ var uglify = require('uglify-js'),
     us = require('underscore')._,
     parser = uglify.parser;
 // Define us some constants since constants are good
-constants = {
+var constants = {
     CALL_FUNCTION: 1,
     CALL_ARGS: 2,
     ASSIGN_TYPE: 1,
@@ -81,12 +81,6 @@ function ModifyAndTraverse(node) {
         }
     }
     else if ((node instanceof Array) && node[0] === 'assign') {
-        /*if (node[2][0] === 'name') {
-            global_variables[node[2][1]] = node[3];
-        }
-        else {
-            global_variables[node[2]] = node[3];
-        }*/
         var rhs = node[3];
         var newcode = '(function() { console.log("store " + unescape("' + escape(deparse(node[2])) + '") + " " + unescape("' + escape(deparse(rhs)) + '"));' ;
         rhs = traverse(rhs).map(ModifyAndTraverse);
@@ -101,15 +95,24 @@ function ModifyAndTraverse(node) {
         }
     }
     else if ((node instanceof Array) && node[0] === 'var') {
+        var nodes = [];
         for (var compound in node[1]) {
-            //global_variables[node[1][compound][0]] = node[1][compound][1];
+            var rhs = node[1][compound][1];
+            var newcode = '(function() { console.log("store " + unescape("' + escape(node[1][compound][0]) + '") + " " + unescape("' + escape(deparse(rhs)) + '"));' ;
+            rhs = traverse(rhs).map(ModifyAndTraverse);
+            newcode = newcode + ' return ' + deparse(rhs) + ';}).apply(this, []);';
+            try {
+                codeToAddTree = parser.parse(newcode)[1][0][1];
+                nodes.push([node[1][compound][0], codeToAddTree]);
+                //this.update([node[0],node[1], node[2], codeToAddTree], true);
+            }
+            catch (e) {
+                console.log(e.message);
+                throw e;
+            }
         }
+        this.update([node[0], nodes], true);
     }
-    /*else if ((node instanceof Array) && node[0] === 'defun') {
-        global_functions[node[1]] = [node[2], node[3]];
-        //ProcessFundef(global_variables, global_functions, node[3], node[1]);
-        this.update(node, true);
-    }*/
 }        
 
 main(process.argv);
