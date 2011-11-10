@@ -72,7 +72,7 @@ function ModifyAndTraverse(node) {
         add.push("return " + deparse([this.node[0], func, args]) +";");
         var codeToAdd = "(function() {" + add.join(';') +"}).apply(this, [])";
         try {
-            codeToAddTree = parser.parse(codeToAdd)[1][0][1];
+            var codeToAddTree = parser.parse(codeToAdd)[1][0][1];
             this.update(codeToAddTree, true);
         }
         catch (e) {
@@ -82,11 +82,11 @@ function ModifyAndTraverse(node) {
     }
     else if ((node instanceof Array) && node[0] === 'assign') {
         var rhs = node[3];
-        var newcode = '(function() { console.log("store " + unescape("' + escape(deparse(node[2])) + '") + " " + unescape("' + escape(deparse(rhs)) + '"));' ;
+        var newcode = '(function() { console.log("store " + unescape("' + escape(deparse(node[2])) + '") + " " + unescape("' + escape(deparse(rhs)) + '") + " <" + ' + deparse(rhs) + ' + ">");' ;
         rhs = traverse(rhs).map(ModifyAndTraverse);
         newcode = newcode + ' return ' + deparse(rhs) + ';}).apply(this, []);';
         try {
-            codeToAddTree = parser.parse(newcode)[1][0][1];
+            var codeToAddTree = parser.parse(newcode)[1][0][1];
             this.update([node[0],node[1], node[2], codeToAddTree], true);
         }
         catch (e) {
@@ -98,11 +98,11 @@ function ModifyAndTraverse(node) {
         var nodes = [];
         for (var compound in node[1]) {
             var rhs = node[1][compound][1];
-            var newcode = '(function() { console.log("store " + unescape("' + escape(node[1][compound][0]) + '") + " " + unescape("' + escape(deparse(rhs)) + '"));' ;
+            var newcode = '(function() { console.log("store " + unescape("' + escape(node[1][compound][0]) + '") + " " + unescape("' + escape(deparse(rhs)) + '") + " <" + ' + deparse(rhs) + ' +  ">");' ;
             rhs = traverse(rhs).map(ModifyAndTraverse);
             newcode = newcode + ' return ' + deparse(rhs) + ';}).apply(this, []);';
             try {
-                codeToAddTree = parser.parse(newcode)[1][0][1];
+                var codeToAddTree = parser.parse(newcode)[1][0][1];
                 nodes.push([node[1][compound][0], codeToAddTree]);
                 //this.update([node[0],node[1], node[2], codeToAddTree], true);
             }
@@ -112,6 +112,23 @@ function ModifyAndTraverse(node) {
             }
         }
         this.update([node[0], nodes], true);
+    }
+    else if ((node instanceof Array) && node[0] === 'name') {
+        var newcode = '(function() {console.log("load " + unescape("' + escape(deparse(node, true)) + '") + " <" + ' + deparse(node) + ' + ">"); return ' + deparse(node) + ';}).apply(this, []);';
+        try {
+            var codeToAddTree = parser.parse(newcode)[1][0][1];
+            node = codeToAddTree;
+            //this.update([node[0],node[1], node[2], codeToAddTree], true);
+        }
+        catch (e) {
+            console.log(e.message);
+            throw e;
+        }
+        this.update(node, true);
+    }
+    else if ((node instanceof Array)) {
+        //console.log("New node " + node[0]);
+        //console.log(node);
     }
 }        
 
