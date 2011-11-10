@@ -28,11 +28,6 @@ function main(args) {
         console.log('Usage main.js <filename>, given ' + args.join(' '));
         return;
     }
-
-    // This is a test case in some ways, we can currently not handle
-    // this kind of callback, since I don't track variable values in closures currently, and
-    // this means that I cannot quite track variables such as this. I have an idea for this, but
-    // that will be another feature
     var callback = function (err, data) {
         if (err) throw err;
         // Since I end up using this file for testing, we want to eliminate the hash bang string,
@@ -116,9 +111,7 @@ function ModifyAndTraverse(node) {
     else if ((node instanceof Array) && node[0] === 'name') {
         var newcode = '(function() {console.log("load " + unescape("' + escape(deparse(node, true)) + '") + " <" + ' + deparse(node) + ' + ">"); return ' + deparse(node) + ';}).apply(this, []);';
         try {
-            var codeToAddTree = parser.parse(newcode)[1][0][1];
-            node = codeToAddTree;
-            //this.update([node[0],node[1], node[2], codeToAddTree], true);
+            node = parser.parse(newcode)[1][0][1];
         }
         catch (e) {
             console.log(e.message);
@@ -126,9 +119,37 @@ function ModifyAndTraverse(node) {
         }
         this.update(node, true);
     }
-    else if ((node instanceof Array)) {
-        //console.log("New node " + node[0]);
-        //console.log(node);
+    else if ((node instanceof Array) && node[0] === 'binary') {
+        var add = [];
+        var args = [this.node[2], this.node[3]];
+        for (var arg in args) {
+            add.push('console.log("arg' + arg + ' " + unescape("' + escape(deparse(args[arg])) + '"))');
+        }
+        var func = this.node[1];
+        add.push('console.log("call " + unescape("' + escape(func) + '"))');
+        args = traverse(args).map(ModifyAndTraverse);
+        add.push("return " + deparse([this.node[0], this.node[1], args[0], args[1]]) +";");
+        var codeToAdd = "(function() {" + add.join(';') +"}).apply(this, [])";
+        try {
+            var codeToAddTree = parser.parse(codeToAdd)[1][0][1];
+            this.update(codeToAddTree, true);
+        }
+        catch (e) {
+            console.log(e.message);
+            throw e;
+        }
+    }
+    else if ((node instanceof Array) && (node[0] === 'defun' || node[0] === 'function')) {
+        var modifiedBody = traverse(node[3]).map(ModifyAndTraverse);
+        try {
+            var codeToAddTree = parser.parse('console.log("enter function ' + node[1] + '");')[1][0];
+            modifiedBody.splice(0, 0, codeToAddTree);
+        }
+        catch (e) {
+            console.log(e.message);
+            throw e;
+        }
+        this.update([node[0],node[1],node[2],modifiedBody], true);
     }
 }        
 
