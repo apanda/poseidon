@@ -57,14 +57,16 @@ function ModifyAndTraverse(node) {
     if ((node instanceof Array) && node[0] === 'call') {
         var add = [];
         var args = this.node[constants.CALL_ARGS];
-        for (var arg in args) {
-            add.push('console.log("arg' + arg + ' " + unescape("' + escape(deparse(args[arg])) + '"))');
-        }
         var func = this.node[constants.CALL_FUNCTION];
-        add.push('console.log("call " + unescape("' + escape(deparse(func)) + '"))');
+        add.push('console.log("call " + unescape("' + escape(deparse(func)) + '") + " {")');
+        for (var arg in args) {
+            add.push('console.log("arg[' + arg + '] " + unescape("' + escape(deparse(args[arg])) + '"))');
+        }
         args = traverse(args).map(ModifyAndTraverse);
         func = traverse(func).map(ModifyAndTraverse);
-        add.push("return " + deparse([this.node[0], func, args]) +";");
+        add.push("var __tempReturn =  " + deparse([this.node[0], func, args]) +";");
+        add.push('console.log("}")');
+        add.push('return __tempReturn');
         var codeToAdd = "(function() {" + add.join(';') +"}).apply(this, [])";
         try {
             var codeToAddTree = parser.parse(codeToAdd)[1][0][1];
@@ -122,13 +124,15 @@ function ModifyAndTraverse(node) {
     else if ((node instanceof Array) && node[0] === 'binary') {
         var add = [];
         var args = [this.node[2], this.node[3]];
-        for (var arg in args) {
-            add.push('console.log("arg' + arg + ' " + unescape("' + escape(deparse(args[arg])) + '"))');
-        }
         var func = this.node[1];
-        add.push('console.log("call " + unescape("' + escape(func) + '"))');
+        add.push('console.log("call " + unescape("' + escape(func) + '") + " {")');
+        for (var arg in args) {
+            add.push('console.log("arg[' + arg + '] " + unescape("' + escape(deparse(args[arg])) + '"))');
+        }
         args = traverse(args).map(ModifyAndTraverse);
-        add.push("return " + deparse([this.node[0], this.node[1], args[0], args[1]]) +";");
+        add.push("var __tempReturn = " + deparse([this.node[0], this.node[1], args[0], args[1]]) +";");
+        add.push('console.log("}")')
+        add.push('return __tempReturn');
         var codeToAdd = "(function() {" + add.join(';') +"}).apply(this, [])";
         try {
             var codeToAddTree = parser.parse(codeToAdd)[1][0][1];
@@ -141,8 +145,13 @@ function ModifyAndTraverse(node) {
     }
     else if ((node instanceof Array) && (node[0] === 'defun' || node[0] === 'function')) {
         var modifiedBody = traverse(node[3]).map(ModifyAndTraverse);
+        var codeToAdd = ['console.log("enter function ' + node[1] + '")'];
+        for (var arg in node[2]) {
+            codeToAdd.push['console.log("' + node[2][arg] + ' = arg[' + arg + ']")'];
+        }
+        var codeToAddString = "(function() {" + codeToAdd.join(';') + "}).apply(this, []);";
         try {
-            var codeToAddTree = parser.parse('console.log("enter function ' + node[1] + '");')[1][0];
+            var codeToAddTree = parser.parse(codeToAddString)[1][0];
             modifiedBody.splice(0, 0, codeToAddTree);
         }
         catch (e) {
@@ -150,6 +159,38 @@ function ModifyAndTraverse(node) {
             throw e;
         }
         this.update([node[0],node[1],node[2],modifiedBody], true);
+    }
+    else if ((node instanceof Array) && (node[0] === 'for-in')) {
+        var modifiedInit = node[1];//traverse(node[1]).map(ModifyAndTraverse);
+        var codeToAdd = 'console.log("for-in " + unescape("' + escape(deparse(node[2])) + '") + " <" + ' + deparse(node[2]) + ' + ">  in " + unescape("' + escape(deparse(node[3])) + '"));';
+        var modifiedCollection = traverse(node[3]).map(ModifyAndTraverse);
+        var modifiedBody = traverse(node[4]).map(ModifyAndTraverse);
+        try {
+            var codeToAddTree = parser.parse(codeToAdd)[1][0];
+            modifiedBody[1].splice(0, 0, codeToAddTree);
+        }
+        catch (e) {
+            console.log(e.message);
+            throw e;
+        }
+        this.update([node[0],modifiedInit, node[2], modifiedCollection, modifiedBody], true);
+    }
+    else if ((node instanceof Array) && (node[0] == 'for')) {
+        var modifiedInit = node[1];//traverse(node[1]).map(ModifyAndTraverse);
+        var codeToAdd = 'console.log("for " + unescape("' + escape(deparse(node[1])) + '") +  " condition " + unescape("' + escape(deparse(node[2])) + 
+                            '") + " incremented as " + unescape("' + escape(deparse(node[3])) + '"));';
+        console.log(codeToAdd);
+        //var modifiedCollection = traverse(node[3]).map(ModifyAndTraverse);
+        var modifiedBody = traverse(node[4]).map(ModifyAndTraverse);
+        try {
+            var codeToAddTree = parser.parse(codeToAdd)[1][0];
+            modifiedBody[1].splice(0, 0, codeToAddTree);
+        }
+        catch (e) {
+            console.log(e.message);
+            throw e;
+        }
+        this.update([node[0],modifiedInit, node[2], node[3], modifiedBody], true);
     }
 }        
 
